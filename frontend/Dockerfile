@@ -1,26 +1,25 @@
-FROM node:20-alpine AS base
+FROM node:20-alpine
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Install pnpm
+RUN npm install -g pnpm
 
 WORKDIR /app
 
+# Copy package files
 COPY package.json pnpm-lock.yaml* ./
-RUN pnpm install --frozen-lockfile || pnpm install
 
+# Install ALL dependencies including next
+RUN pnpm install
+
+# Copy rest of source
 COPY . .
 
-ENV NEXT_PUBLIC_APP_URL=""
-RUN printf '/** @type {import("next").NextConfig} */\nconst c = { output: "standalone" };\nexport default c;\n' > next.config.mjs && pnpm build
+# Build Next.js
+RUN pnpm run build
 
-FROM node:20-alpine AS runner
-WORKDIR /app
+EXPOSE 8080
 
+ENV PORT=8080
 ENV NODE_ENV=production
-ENV PORT=3000
 
-COPY --from=base /app/.next/standalone ./
-COPY --from=base /app/.next/static ./.next/static
-
-EXPOSE 3000
-
-CMD ["node", "server.js"]
+CMD ["./node_modules/.bin/next", "start", "-p", "8080"]
