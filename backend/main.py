@@ -126,3 +126,7 @@ async def triage_sync(request: TriageRequest):
         follow_up_plan=final_state["follow_up_plan"],
         processing_time_ms=int((time.time() - start_time) * 1000),
     )
+    
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.uvicorn.run("main:app", host="0.0.0.0", port=8080)
