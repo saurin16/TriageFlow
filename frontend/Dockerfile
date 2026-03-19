@@ -1,25 +1,19 @@
-FROM node:20-alpine
 
-# Install pnpm
-RUN npm install -g pnpm
+FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json pnpm-lock.yaml* ./
+COPY package*.json ./
 
-# Install ALL dependencies including next
-RUN pnpm install
+RUN npm install --legacy-peer-deps
 
-# Copy rest of source
 COPY . .
 
-# Build Next.js
-RUN pnpm run build
+RUN npm run build
 
 EXPOSE 8080
 
 ENV PORT=8080
-ENV NODE_ENV=production
+ENV HOSTNAME=0.0.0.0
 
-CMD ["./node_modules/.bin/next", "start", "-p", "8080"]
+CMD ["./node_modules/.bin/next", "start", "-p", "8080", "-H", "0.0.0.0"]
