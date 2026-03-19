@@ -1,60 +1,89 @@
+
 name: triageflow
 region: nyc
 
 services:
-  - name: frontend
-    source_dir: /frontend
+  - name: triageflow-backend
+    source_dir: backend
+    dockerfile_path: Dockerfile
     github:
-      repo: YOUR_GITHUB_USERNAME/triageflow
+      repo: saurin16/TriageFlow
       branch: main
       deploy_on_push: true
-    build_command: npm run build
-    run_command: npm start
-    environment_slug: node-js
-    instance_count: 1
-    instance_size_slug: apps-s-1vcpu-1gb
     http_port: 8080
-    routes:
-      - path: /
-    envs:
-      - key: BACKEND_URL
-        value: ${backend.PRIVATE_URL}
-      - key: NEXT_PUBLIC_APP_URL
-        scope: RUN_AND_BUILD_TIME
-        value: ${APP_URL}
-
-  - name: backend
-    source_dir: /backend
-    github:
-      repo: YOUR_GITHUB_USERNAME/triageflow
-      branch: main
-      deploy_on_push: true
-    build_command: pip install -r requirements.txt
-    run_command: uvicorn main:app --host 0.0.0.0 --port 8000
-    environment_slug: python
+    instance_size_slug: basic-xs
     instance_count: 1
-    instance_size_slug: apps-s-1vcpu-1gb
-    http_port: 8000
     routes:
       - path: /api
+        preserve_path_prefix: false
+    health_check:
+      http_path: /health
+      initial_delay_seconds: 60
+      period_seconds: 15
+      timeout_seconds: 10
+      success_threshold: 1
+      failure_threshold: 5
     envs:
       - key: DO_INFERENCE_KEY
-        scope: RUN_AND_BUILD_TIME
+        scope: RUN_TIME
         type: SECRET
-        value: YOUR_DO_INFERENCE_KEY
+        value: ""
       - key: DO_INFERENCE_BASE_URL
-        scope: RUN_AND_BUILD_TIME
+        scope: RUN_TIME
         value: https://inference.do-ai.run/v1
       - key: DO_MODEL
-        scope: RUN_AND_BUILD_TIME
+        scope: RUN_TIME
         value: claude-sonnet-4-6
       - key: DATABASE_URL
-        scope: RUN_AND_BUILD_TIME
-        type: SECRET
+        scope: RUN_TIME
         value: ${triageflow-db.DATABASE_URL}
+      - key: LANGSMITH_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: ""
+      - key: LANGCHAIN_TRACING_V2
+        scope: RUN_TIME
+        value: "true"
+      - key: LANGSMITH_PROJECT
+        scope: RUN_TIME
+        value: triageflow
       - key: ENVIRONMENT
-        scope: RUN_AND_BUILD_TIME
+        scope: RUN_TIME
         value: production
+
+  - name: frontend
+    source_dir: frontend
+    dockerfile_path: frontend/Dockerfile
+    github:
+      repo: saurin16/TriageFlow
+      branch: main
+      deploy_on_push: true
+    http_port: 8080
+    instance_size_slug: basic-xs
+    instance_count: 1
+    health_check:
+      http_path: /
+      initial_delay_seconds: 120
+      period_seconds: 15
+      timeout_seconds: 10
+      success_threshold: 1
+      failure_threshold: 5
+    envs:
+      - key: PORT
+        scope: RUN_TIME
+        value: "8080"
+      - key: HOSTNAME
+        scope: RUN_TIME
+        value: "0.0.0.0"
+      - key: NODE_ENV
+        scope: RUN_TIME
+        value: production
+      - key: BACKEND_URL
+        scope: RUN_TIME
+        value: ${backend.PRIVATE_URL}
+      - key: NEXT_PUBLIC_APP_URL
+        scope: RUN_TIME
+        value: ${APP_URL}
 
 databases:
   - name: triageflow-db
